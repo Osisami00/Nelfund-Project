@@ -403,7 +403,19 @@ from langchain_core.messages import HumanMessage, AIMessage
 from models import ChatRequest, ChatResponse
 from config import config
 from llm import extract_content_from_ai_message
-
+import re
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+from langchain_core.messages import HumanMessage, AIMessage
+from models import (
+    SignupRequest, SignupResponse,
+    ChatRequest, ChatResponse,
+    ChatHistoryRequest, ChatHistoryResponse
+)
+from config import config
+from llm import extract_content_from_ai_message
+from database import db
 
 # Session storage
 sessions = {}
@@ -438,7 +450,147 @@ def create_app(agent, nelfund_retriever, llm):
             "ai_provider": "Google Gemini AI (Chat) + Sentence Transformers (Embeddings)",
             "embedding_model": config.SENTENCE_TRANSFORMER_MODEL
         }
+    @app.on_event("startup")
+    async def startup_event():
+        """Initialize database on startup"""
+        db.create_tables()
+        print("✅ Database initialized")
     
+    @app.get("/")
+    async def root():
+        """Health check"""
+        return {
+            "service": "NELFUND AI Assistant",
+            "status": "operational" if agent else "initializing",
+            "endpoints": [
+                "POST /signup - Sign up with phone and name",
+                "POST /chat - Send chat message",
+                "GET /history/{phone} - Get chat history",
+                "DELETE /history/{phone} - Clear history"
+            ],
+            "flow": "Sign up once → Chat forever (auto-saved)"
+        }
+    
+    # ========== SIGNUP ENDPOINT ==========
+    
+    @app.post("/signup", response_model=SignupResponse)
+    async def signup(request: SignupRequest):
+        """Signup user - creates if new, returns if existing"""
+        try:
+            result = db.signup_user(
+                phone=request.phone,
+                full_name=request.full_name
+            )
+            
+            if not result["success"]:
+                raise HTTPException(status_code=500, detail=result["message"])
+            
+            return SignupResponse(
+                user_id=result["user_id"],
+                phone=result["phone"],
+                full_name=result["full_name"],
+                message=result["message"]
+            )
+            
+        except Exception as e:
+            print(f"❌ Signup error: {e}")
+            raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
+    
+    # ========== CHAT ENDPOINTS ==========
+    
+    @app.post("/chat", response_model=ChatResponse)
+    async def chat(request: ChatRequest):
+        """Chat with AI - automatically saves messages"""
+        if agent is None:
+            raise HTTPException(status_code=503, detail="AI service initializing")
+        
+        try:
+            # Save user message
+            db.save_chat_message(request.phone, request.message, "user")
+            
+            # Invoke agent
+            result = agent.invoke(
+                {"messages": [HumanMessage(content=request.message)]},
+                config={"configurable": {"thread_id": request.phone}}
+            )
+            
+            # Extract response and sources
+            final_response = None
+            sources = []
+            
+            for message in result["messages"]:
+                if isinstance(message, AIMessage):
+                    if hasattr(message, 'tool_calls') and message.tool_calls:
+                        # Extract sources
+                        for tool_call in message.tool_calls:
+                            if 'args' in tool_call and 'query' in tool_call['args']:
+                                retrieved_docs = nelfund_retriever.search(tool_call['args']['query'])
+                                for doc in retrieved_docs:
+                                    source_entry = {
+                                        "source": doc.get("source", "Unknown"),
+                                        "page": doc.get("page", "N/A"),
+                                        "content_preview": doc.get("content", "")[:200] + "..."
+                                    }
+                                    if source_entry not in sources:
+                                        sources.append(source_entry)
+                    
+                    final_response = extract_content_from_ai_message(message)
+            
+            if not final_response:
+                final_response = "I apologize, I couldn't generate a response. Please try rephrasing your question."
+            
+            # Clean response
+            final_response = re.sub(r"\\(.?)\\*", r"\1", final_response)
+            final_response = re.sub(r"[\n•*-]+", ". ", final_response)
+            final_response = re.sub(r"\s{2,}", " ", final_response).strip()
+            final_response = re.sub(r"\.\s*\.", ".", final_response)
+            final_response = re.sub(r"\s+([.,!?])", r"\1", final_response)
+            
+            if final_response and not final_response[-1] in '.!?':
+                final_response += "."
+            
+            # Save AI response
+            db.save_chat_message(request.phone, final_response, "ai", sources)
+            
+            return ChatResponse(
+                response=final_response,
+                phone=request.phone,
+                sources=sources
+            )
+            
+        except Exception as e:
+            print(f"❌ Chat error: {e}")
+            raise HTTPException(status_code=500, detail=f"AI service error: {str(e)}")
+    
+    @app.get("/history/{phone}", response_model=ChatHistoryResponse)
+    async def get_chat_history(phone: str):
+        """Get chat history for phone"""
+        try:
+            history = db.get_chat_history(phone)
+            
+            return ChatHistoryResponse(
+                phone=phone,
+                history=history
+            )
+            
+        except Exception as e:
+            print(f"❌ History error: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to get history: {str(e)}")
+    
+    @app.delete("/history/{phone}")
+    async def clear_chat_history(phone: str):
+        """Clear chat history for phone"""
+        try:
+            success = db.clear_chat_history(phone)
+            
+            if success:
+                return {"status": "success", "message": "Chat history cleared"}
+            else:
+                return {"status": "no_content", "message": "No chat history to clear"}
+            
+        except Exception as e:
+            print(f"❌ Clear history error: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to clear history: {str(e)}")
     @app.post("/chat", response_model=ChatResponse)
     async def chat(request: ChatRequest):
         """Main chat endpoint"""

@@ -105,3 +105,42 @@ class SessionInfo(BaseModel):
     phone_number: str
     message_count: int
     created_at: datetime
+
+from pydantic import BaseModel, Field, validator
+import re
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+
+# Only need Signup and Chat models
+class SignupRequest(BaseModel):
+    phone: str = Field(..., description="Phone number (digits only)")
+    full_name: str = Field(..., description="User's full name")
+    
+    @validator('phone')
+    def validate_phone(cls, v):
+        digits = re.sub(r'\D', '', v)
+        if len(digits) < 10:
+            raise ValueError('Phone number must have at least 10 digits')
+        return digits
+
+class SignupResponse(BaseModel):
+    user_id: str = Field(..., description="User ID")
+    phone: str = Field(..., description="Phone number")
+    full_name: str = Field(..., description="Full name")
+    message: str = Field(..., description="Response message")
+
+class ChatRequest(BaseModel):
+    phone: str = Field(..., description="User's phone number")
+    message: str = Field(..., description="Chat message")
+
+class ChatResponse(BaseModel):
+    response: str = Field(..., description="AI response")
+    phone: str = Field(..., description="User's phone")
+    sources: List[Dict[str, Any]] = Field(default_factory=list, description="Source documents")
+
+class ChatHistoryRequest(BaseModel):
+    phone: str = Field(..., description="User's phone number")
+
+class ChatHistoryResponse(BaseModel):
+    phone: str = Field(..., description="Phone number")
+    history: List[Dict[str, Any]] = Field(..., description="Chat history")
