@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Loader2, FileText, Mic, Square, History, Save, LogIn, UserPlus, AlertCircle } from 'lucide-react'
-import { sendMessage, getSessionHistory, resetSession, getFallbackResponse } from '../services/api.js'
+import { Send, Bot, User, Loader2, FileText, Mic, Square, History, Save, LogIn, UserPlus } from 'lucide-react'
+import { sendMessage, getSessionHistory, resetSession } from '../services/api.js'
 
 const ChatInterface = ({ currentUser, onShowAuth }) => {
   const [messages, setMessages] = useState([])
@@ -10,53 +10,16 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
   const [recognition, setRecognition] = useState(null)
   const [transcript, setTranscript] = useState('')
   const [showHistory, setShowHistory] = useState(false)
-  const [backendConnected, setBackendConnected] = useState(true)
   const messagesEndRef = useRef(null)
-
-  // Local storage functions
-  const saveChatMessage = (message, sender, citations = []) => {
-    if (!currentUser) return null
-    
-    const chatKey = `nelfi_chats_${currentUser.id || 'guest'}`
-    const chats = JSON.parse(localStorage.getItem(chatKey) || '[]')
-    
-    const newMessage = {
-      id: Date.now() + Math.random(),
-      text: message,
-      sender,
-      citations,
-      timestamp: new Date().toISOString()
-    }
-    
-    chats.push(newMessage)
-    localStorage.setItem(chatKey, JSON.stringify(chats))
-    
-    return newMessage
-  }
-
-  const getUserChatHistory = () => {
-    if (!currentUser) return []
-    
-    const chatKey = `nelfi_chats_${currentUser.id || 'guest'}`
-    return JSON.parse(localStorage.getItem(chatKey) || '[]')
-  }
-
-  const clearUserChatHistory = () => {
-    if (!currentUser) return
-    
-    const chatKey = `nelfi_chats_${currentUser.id || 'guest'}`
-    localStorage.removeItem(chatKey)
-  }
 
   // Load chat history on component mount
   useEffect(() => {
     const loadHistory = async () => {
-      if (currentUser && !currentUser.isGuest && currentUser.phone) {
-        try {
+      try {
+        if (currentUser && !currentUser.isGuest && currentUser.phone) {
           const sessionData = await getSessionHistory(currentUser.phone)
           
           if (sessionData.messages && sessionData.messages.length > 0) {
-            // Convert backend session messages to frontend format
             const formattedMessages = sessionData.messages.map(msg => ({
               id: Date.now() + Math.random(),
               text: msg.content,
@@ -65,51 +28,37 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
               citations: []
             }))
             setMessages(formattedMessages)
-            setBackendConnected(true)
           } else {
-            // Load from local storage if no backend session
-            const localHistory = getUserChatHistory()
-            if (localHistory.length > 0) {
-              setMessages(localHistory)
-            } else {
-              // Default welcome message for registered users
-              setMessages([
-                {
-                  id: Date.now(),
-                  text: `Hello ${currentUser?.fullName?.split(' ')[0] || 'Student'}! I'm your NELFUND AI Assistant. I can help you with information about student loans, eligibility, application process, and more. How can I assist you today?`,
-                  sender: 'ai',
-                  timestamp: new Date().toISOString(),
-                  citations: []
-                }
-              ])
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load session history:', error)
-          setBackendConnected(false)
-          // Fallback to local storage
-          const localHistory = getUserChatHistory()
-          if (localHistory.length > 0) {
-            setMessages(localHistory)
-          } else {
-            // Default welcome message
+            // Default welcome message for registered users
             setMessages([
               {
                 id: Date.now(),
-                text: `Hello ${currentUser?.fullName?.split(' ')[0] || 'Student'}! I'm your NELFUND AI Assistant. I can help you with information about student loans, eligibility, application process, and more. How can I assist you today?`,
+                text: `Hello ${currentUser?.fullName?.split(' ')[0] || 'Student'}! I'm your NELFUND AI Assistant. How can I assist you today?`,
                 sender: 'ai',
                 timestamp: new Date().toISOString(),
                 citations: []
               }
             ])
           }
+        } else {
+          // Default welcome message for guest users
+          setMessages([
+            {
+              id: Date.now(),
+              text: "Hello! I'm your NELFUND AI Assistant. You're chatting as a guest. Register to save your conversation.",
+              sender: 'ai',
+              timestamp: new Date().toISOString(),
+              citations: []
+            }
+          ])
         }
-      } else {
-        // Default welcome message for guest users
+      } catch (error) {
+        console.error('Failed to load session history:', error)
+        // Still show welcome message
         setMessages([
           {
             id: Date.now(),
-            text: "Hello! I'm your NELFUND AI Assistant. I can help you with information about student loans, eligibility, application process, and more. You're chatting as a guest. Register to save your conversation.",
+            text: `Hello! I'm your NELFUND AI Assistant. How can I assist you today?`,
             sender: 'ai',
             timestamp: new Date().toISOString(),
             citations: []
@@ -159,8 +108,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
       setInput('')
       recognition.start()
       setIsRecording(true)
-    } else {
-      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.')
     }
   }
 
@@ -191,27 +138,15 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
       citations: []
     }
 
-    // Save user message
-    saveChatMessage(input, 'user')
-
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setTranscript('')
     setIsLoading(true)
 
     try {
-      // Use real API call with phone number or guest identifier
       const phoneNumber = currentUser?.phone || 'guest-' + Date.now().toString()
       const apiResponse = await sendMessage(phoneNumber, input)
 
-      // Check if we got a fallback response
-      if (apiResponse.isFallback) {
-        setBackendConnected(false)
-      } else {
-        setBackendConnected(true)
-      }
-
-      // Format citations from backend response
       const aiCitations = apiResponse.sources.map(source => ({
         document: source.source || 'NELFUND Document',
         section: source.page || 'Section',
@@ -224,32 +159,23 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
         sender: 'ai',
         timestamp: apiResponse.timestamp || new Date().toISOString(),
         citations: aiCitations,
-        used_retrieval: apiResponse.used_retrieval || false,
-        isFallback: apiResponse.isFallback || false
+        used_retrieval: apiResponse.used_retrieval || false
       }
-
-      // Save AI response
-      saveChatMessage(apiResponse.answer, 'ai', aiCitations)
 
       setMessages(prev => [...prev, aiResponse])
     } catch (error) {
       console.error('Failed to send message:', error)
-      setBackendConnected(false)
       
-      // Use fallback response generator
-      const fallbackResponse = getFallbackResponse(input)
-      const aiResponse = {
+      const errorMessage = {
         id: Date.now() + 1,
-        text: fallbackResponse.answer,
+        text: "I'm having trouble connecting to the backend service. Please make sure the FastAPI server is running on http://localhost:8000.",
         sender: 'ai',
         timestamp: new Date().toISOString(),
-        citations: fallbackResponse.sources,
-        used_retrieval: false,
-        isFallback: true
+        citations: [],
+        isError: true
       }
       
-      saveChatMessage(fallbackResponse.answer, 'ai', fallbackResponse.sources)
-      setMessages(prev => [...prev, aiResponse])
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }
@@ -277,7 +203,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
           await resetSession(currentUser.phone)
         }
         
-        clearUserChatHistory()
         setMessages([
           {
             id: Date.now(),
@@ -307,10 +232,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
     return groups
   }
 
-  // Check if user has chat history
-  const hasHistory = getUserChatHistory().length > 0
-
-  // Handle login/register from guest
   const handleGuestAuth = () => {
     if (onShowAuth) {
       onShowAuth()
@@ -319,7 +240,7 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with Auth Options for Guests */}
+      {/* Header with Auth Options */}
       <div className="border-b border-gray-200 p-2 flex justify-between items-center">
         {currentUser?.isGuest ? (
           <div className="flex items-center space-x-2">
@@ -351,34 +272,16 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
               <span className="text-xs">Chat saved for {currentUser?.fullName?.split(' ')[0] || 'you'}</span>
             </div>
             
-            {hasHistory && (
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="flex items-center space-x-1 text-sm text-gray-600 hover:text-[#006400] px-2 py-1 rounded hover:bg-gray-100"
-              >
-                <History size={14} />
-                <span>History</span>
-              </button>
-            )}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center space-x-1 text-sm text-gray-600 hover:text-[#006400] px-2 py-1 rounded hover:bg-gray-100"
+            >
+              <History size={14} />
+              <span>History</span>
+            </button>
           </div>
         )}
       </div>
-
-      {/* Backend Connection Warning */}
-      {!backendConnected && !showHistory && (
-        <div className="px-4 py-2 bg-yellow-50 border-y border-yellow-200">
-          <div className="flex items-center justify-center space-x-2">
-            <AlertCircle size={16} className="text-yellow-600" />
-            <span className="text-sm text-yellow-600 font-medium">Backend not connected - Using fallback responses</span>
-            <button 
-              onClick={() => window.open('http://localhost:8000', '_blank')}
-              className="text-xs text-yellow-800 underline hover:text-yellow-900"
-            >
-              Check backend
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 chat-scrollbar sm:p-4 sm:space-y-4">
@@ -428,12 +331,8 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                               <span className="text-[10px] sm:text-xs opacity-70">
                                 {formatTime(message.timestamp)}
                               </span>
-                              {message.isFallback && (
-                                <span className="text-[10px] sm:text-xs text-yellow-600">(Fallback)</span>
-                              )}
                             </div>
                             
-                            {/* Citations */}
                             {message.sender === 'ai' && message.citations && message.citations.length > 0 && (
                               <div className="mt-2 pt-2 border-t border-gray-200/50 sm:mt-3 sm:pt-3">
                                 <div className="flex items-center text-[10px] sm:text-xs text-gray-600 mb-1">
@@ -441,9 +340,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                                   <span className="font-medium">Sources:</span>
                                   {message.used_retrieval && (
                                     <span className="ml-1 text-green-600">(Retrieved from documents)</span>
-                                  )}
-                                  {message.isFallback && (
-                                    <span className="ml-1 text-yellow-600">(Sample data)</span>
                                   )}
                                 </div>
                                 <div className="space-y-0.5 sm:space-y-1">
@@ -478,33 +374,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
           </div>
         ) : (
           <>
-            {/* Registration Prompt for Guests (after 2 messages) */}
-            {currentUser?.isGuest && messages.length >= 3 && (
-              <div className="flex justify-center">
-                <div className="w-full max-w-[85%] sm:max-w-[80%] rounded-2xl bg-gradient-to-r from-green-50 to-green-100 border border-green-200 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-[#006400] flex items-center justify-center">
-                        <Save size={16} className="text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900">Save your conversation</h4>
-                        <p className="text-xs text-gray-600">Register to access your chat history on any device</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleGuestAuth()}
-                        className="text-xs bg-[#006400] text-white px-3 py-1.5 rounded hover:bg-[#004d00] transition-colors"
-                      >
-                        Register
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -531,12 +400,11 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                         <span className="text-[10px] sm:text-xs opacity-70">
                           {formatTime(message.timestamp)}
                         </span>
-                        {message.isFallback && (
-                          <span className="text-[10px] sm:text-xs text-yellow-600">(Fallback)</span>
+                        {message.isError && (
+                          <span className="text-[10px] sm:text-xs text-red-500">(Error)</span>
                         )}
                       </div>
                       
-                      {/* Citations */}
                       {message.sender === 'ai' && message.citations && message.citations.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-gray-200/50 sm:mt-3 sm:pt-3">
                           <div className="flex items-center text-[10px] sm:text-xs text-gray-600 mb-1">
@@ -544,9 +412,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                             <span className="font-medium">Sources:</span>
                             {message.used_retrieval && (
                               <span className="ml-1 text-green-600">(Retrieved from documents)</span>
-                            )}
-                            {message.isFallback && (
-                              <span className="ml-1 text-yellow-600">(Sample data)</span>
                             )}
                           </div>
                           <div className="space-y-0.5 sm:space-y-1">
@@ -574,9 +439,7 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                   <div className="flex items-center space-x-2">
                     <Bot className="text-[#006400] sm:size-4" size={14} />
                     <Loader2 className="animate-spin text-[#006400] sm:size-4" size={14} />
-                    <span className="text-xs sm:text-sm text-gray-600">
-                      {backendConnected ? 'Thinking...' : 'Generating fallback response...'}
-                    </span>
+                    <span className="text-xs sm:text-sm text-gray-600">Thinking...</span>
                   </div>
                 </div>
               </div>
@@ -618,7 +481,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                 className="w-full border border-gray-300 rounded-lg pl-4 pr-10 py-2.5 sm:py-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-[#006400] focus:border-transparent"
                 disabled={isLoading}
               />
-              {/* Mic Button */}
               <button
                 type="button"
                 onClick={isRecording ? stopRecording : startRecording}
@@ -644,34 +506,6 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
               <Send size={18} className="sm:size-5" />
             </button>
           </form>
-          
-          <div className="flex items-center justify-between mt-2">
-            <div className="text-[10px] sm:text-xs">
-              {currentUser?.isGuest ? (
-                <button
-                  onClick={() => handleGuestAuth()}
-                  className="text-[#006400] hover:text-[#004d00] underline flex items-center space-x-1"
-                >
-                  <LogIn size={10} />
-                  <span>Register to save your chat</span>
-                </button>
-              ) : (
-                <span className="text-green-600">Chat saved for {currentUser?.fullName?.split(' ')[0] || 'you'}</span>
-              )}
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className={`w-2 h-2 rounded-full ${currentUser?.isGuest ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-              <span className="text-[10px] sm:text-xs text-gray-400">
-                {currentUser?.isGuest ? 'Guest mode' : 'Auto-save'}
-              </span>
-              {!backendConnected && (
-                <div className="flex items-center space-x-1">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                  <span className="text-[10px] sm:text-xs text-yellow-600">Fallback mode</span>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       )}
     </div>
