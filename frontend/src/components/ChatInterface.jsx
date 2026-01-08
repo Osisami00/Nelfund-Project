@@ -144,8 +144,8 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
     setIsLoading(true)
 
     try {
-      const phoneNumber = currentUser?.phone || 'guest-' + Date.now().toString()
-      const apiResponse = await sendMessage(phoneNumber, input)
+      const phone_number = currentUser?.phone || 'guest-' + Date.now().toString()
+      const apiResponse = await sendMessage(phone_number, input)
 
       const aiCitations = apiResponse.sources.map(source => ({
         document: source.source || 'NELFUND Document',

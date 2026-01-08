@@ -1,7 +1,7 @@
 // API service for backend communication
 const API_BASE_URL = 'http://localhost:8000'
 
-export const sendMessage = async (phoneNumber, message) => {
+export const sendMessage = async (phone_number, message) => {
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
@@ -10,7 +10,7 @@ export const sendMessage = async (phoneNumber, message) => {
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        phone_number: phoneNumber, // Correct: phone_number
+        phone_number: phone_number, // Correct: phone_number
         message: message
       })
     })
@@ -34,9 +34,9 @@ export const sendMessage = async (phoneNumber, message) => {
   }
 }
 
-export const getSessionHistory = async (phoneNumber) => {
+export const getSessionHistory = async (phone_number) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/sessions/${phoneNumber}`)
+    const response = await fetch(`${API_BASE_URL}/sessions/${phone_number}`)
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -53,9 +53,9 @@ export const getSessionHistory = async (phoneNumber) => {
   }
 }
 
-export const resetSession = async (phoneNumber) => {
+export const resetSession = async (phone_number) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/reset/${phoneNumber}`, {
+    const response = await fetch(`${API_BASE_URL}/reset/${phone_number}`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
