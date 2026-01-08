@@ -33,13 +33,50 @@
 #     created_at: datetime
 
 
+
+
+# """
+# models.py
+# Pydantic models for API requests and responses
+# """
+# from pydantic import BaseModel, Field
+# from typing import List, Dict, Literal
+# from datetime import datetime
+
+
+# class ChatMessage(BaseModel):
+#     content: str
+#     role: Literal["user", "assistant"]
+#     timestamp: datetime = Field(default_factory=datetime.now)
+
+
+# class ChatRequest(BaseModel):
+#     message: str
+#     phone_number: str = Field(..., description="User's phone number for session identification")
+
+
+# class ChatResponse(BaseModel):
+#     response: str
+#     phone_number: str
+#     used_retrieval: bool = False
+#     sources: List[Dict] = Field(default_factory=list)
+#     timestamp: datetime = Field(default_factory=datetime.now)
+
+
+# class SessionInfo(BaseModel):
+#     phone_number: str
+#     message_count: int
+#     created_at: datetime
+
+
 """
 models.py
 Pydantic models for API requests and responses
 """
 from pydantic import BaseModel, Field
-from typing import List, Dict, Literal
+from typing import List, Dict, Literal, Optional
 from datetime import datetime
+import uuid
 
 
 class ChatMessage(BaseModel):
@@ -50,7 +87,10 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    phone_number: str = Field(..., description="User's phone number for session identification")
+    phone_number: Optional[str] = Field(
+        default_factory=lambda: f"guest_{str(uuid.uuid4())[:8]}", 
+        description="User's phone number for session identification. Auto-generated for guest users."
+    )
 
 
 class ChatResponse(BaseModel):
