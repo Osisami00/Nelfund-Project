@@ -245,7 +245,7 @@ This project is licensed under the MIT License
 
 ## 📞 Contact
 
-**Project Repository:** https://github.com/your-team/nelfund-navigator
+**Project Repository:** https://github.com/Osisami00/Nelfund-Project.git
 
 **Email:** osisamimichael@gmail.com
 
