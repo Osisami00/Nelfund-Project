@@ -439,7 +439,7 @@ const ChatInterface = ({ currentUser, onShowAuth }) => {
                   <div className="flex items-center space-x-2">
                     <Bot className="text-[#006400] sm:size-4" size={14} />
                     <Loader2 className="animate-spin text-[#006400] sm:size-4" size={14} />
-                    <span className="text-xs sm:text-sm text-gray-600">Thinking...</span>
+                    <span className="text-xs sm:text-sm text-gray-600">NelFI is typing...</span>
                   </div>
                 </div>
               </div>
