@@ -13,7 +13,6 @@ An intelligent chatbot that helps Nigerian students understand and navigate the 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
-- [Contributing](#-contributing)
 - [Team](#-team)
 - [License](#-license)
 
@@ -160,59 +159,6 @@ nelfund-navigator/
 │   └── presentation.pdf
 │
 └── README.md
-```
-
----
-
-## 💻 Usage
-
-### 1. Start Both Services
-
-**Terminal 1 (Backend):**
-```bash
-cd backend
-uvicorn main:app --reload
-```
-
-**Terminal 2 (Frontend):**
-```bash
-cd frontend
-npm run dev
-```
-
-### 2. Open Browser
-
-Navigate to: **http://localhost:5173**
-
-### 3. Start Chatting!
-
-**Example Questions:**
-
-- "Am I eligible for NELFUND loan?"
-- "How do I apply for student loan?"
-- "What documents do I need?"
-- "When do I start repaying the loan?"
-- "Which universities are covered?"
-- "What if my parents earn above ₦500,000?"
-- "Is there an age limit for applicants?"
-- "What happens if I fail a course?"
-
-### 4. Observe Agentic Behavior
-
-Try these to see conditional retrieval:
-
-- **"Hello"** → Direct response (no retrieval)
-- **"What can you do?"** → Direct response
-- **"Am I eligible?"** → Retrieves documents
-- **"Tell me more"** → Uses conversation memory
-
----
-
-## 📡 API Documentation
-
-### Base URL
-```
-http://localhost:8000
 ```
 
 ---
