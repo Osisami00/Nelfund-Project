@@ -13,10 +13,6 @@ An intelligent chatbot that helps Nigerian students understand and navigate the 
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
-- [Installation & Setup](#-installation--setup)
-- [Usage](#-usage)
-- [API Documentation](#-api-documentation)
-- [Demo](#-demo)
 - [Contributing](#-contributing)
 - [Team](#-team)
 - [License](#-license)
@@ -168,92 +164,6 @@ nelfund-navigator/
 
 ---
 
-## 🚀 Installation & Setup
-
-### Prerequisites
-
-- **Python 3.10+**
-- **Node.js 18+** and npm
-- **Google API Key** (for Gemini)
-- **Git**
-
-### Step 1: Clone Repository
-
-```bash
-git clone https://github.com/your-team/nelfund-navigator.git
-cd nelfund-navigator
-```
-
-### Step 2: Backend Setup
-
-#### 2.1 Create Virtual Environment
-
-```bash
-cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS/Linux
-source venv/bin/activate
-```
-
-#### 2.2 Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-#### 2.3 Configure Environment
-
-Create a `.env` file in the `backend/` directory:
-
-```env
-GOOGLE_API_KEY=your_gemini_api_key_here
-```
-
-**Get your API key:** https://makersuite.google.com/app/apikey
-
-#### 2.4 Add Documents
-
-Place NELFUND policy documents in `backend/data/`:
-- FAQ-STUDENTS.pdf
-- NELFUND.pdf
-- Student Loan Act 2023.pdf
-- Application Guidelines.pdf
-- etc.
-
-Or update paths in `backend/config.py`.
-
-#### 2.5 Run Backend
-
-```bash
-# Option 1: Direct execution
-python main.py
-
-# Option 2: Using uvicorn (recommended)
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Backend will start at: **http://localhost:8000**
-
-API docs available at: **http://localhost:8000/docs**
-
-### Step 3: Frontend Setup
-
-Open a **new terminal** (keep backend running):
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend will start at: **http://localhost:5173**
-
----
-
 ## 💻 Usage
 
 ### 1. Start Both Services
@@ -305,159 +215,6 @@ Try these to see conditional retrieval:
 http://localhost:8000
 ```
 
-### Endpoints
-
-#### 1. Health Check
-```http
-GET /
-```
-
-**Response:**
-```json
-{
-  "service": "NELFUND Student Loan Navigator",
-  "status": "operational",
-  "version": "1.0.0",
-  "ai_provider": "Google Gemini AI"
-}
-```
-
-#### 2. Chat
-```http
-POST /chat
-```
-
-**Request Body:**
-```json
-{
-  "message": "Am I eligible for NELFUND loan?",
-  "session_id": "optional-session-id"
-}
-```
-
-**Response:**
-```json
-{
-  "response": "Based on NELFUND guidelines, you are eligible if...",
-  "session_id": "abc-123-xyz",
-  "used_retrieval": true,
-  "sources": [],
-  "timestamp": "2025-01-09T10:30:00"
-}
-```
-
-#### 3. Get Session History
-```http
-GET /sessions/{session_id}
-```
-
-**Response:**
-```json
-{
-  "session_id": "abc-123-xyz",
-  "created_at": "2025-01-09T10:00:00",
-  "messages": [...],
-  "message_count": 5
-}
-```
-
-#### 4. Reset Session
-```http
-POST /reset/{session_id}
-```
-
-#### 5. System Status
-```http
-GET /status
-```
-
-**Response:**
-```json
-{
-  "status": "operational",
-  "sessions_active": 3,
-  "total_messages": 47,
-  "vector_store": "loaded",
-  "agent": "ready"
-}
-```
-
-#### 6. Reload Embeddings
-```http
-POST /reload-embeddings
-```
-
-Updates vector database with new documents.
-
-### Interactive API Docs
-
-Visit **http://localhost:8000/docs** for Swagger UI documentation.
-
----
-
-## 🎬 Demo
-
-### Video Demonstration
-
-📹 **Watch our demo:** [YouTube Link] / [Google Drive Link]
-
-**Demo includes:**
-- System overview and architecture
-- Live chat demonstration
-- Agentic behavior showcase
-- Source citation examples
-- Conversation memory in action
-- Technical walkthrough
-
-### Screenshots
-
-**Chat Interface:**
-```
-┌─────────────────────────────────────┐
-│  NELFUND Student Loan Navigator     │
-├─────────────────────────────────────┤
-│                                     │
-│  You: Am I eligible?                │
-│                                     │
-│  🤖 NELFI: Based on NELFUND        │
-│  guidelines, you are eligible if... │
-│  📄 [Source: FAQ-STUDENTS.pdf]     │
-│                                     │
-│  You: What documents do I need?     │
-│                                     │
-│  🤖 NELFI: You'll need...          │
-│                                     │
-└─────────────────────────────────────┘
-```
-
----
-
-## 🧪 Testing
-
-### Backend Tests
-
-```bash
-cd backend
-
-# Test API health
-curl http://localhost:8000/
-
-# Test chat endpoint
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Am I eligible for NELFUND?"}'
-
-# Test system status
-curl http://localhost:8000/status
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-npm run test
-```
-
 ---
 
 ## 📊 Performance
@@ -470,122 +227,18 @@ npm run test
 
 ---
 
-## 🔧 Configuration
-
-### Customization Options
-
-**Backend (`config.py`):**
-```python
-# Change LLM model
-GEMINI_MODEL = "gemini-1.5-flash"  # Faster/cheaper
-
-# Adjust chunk size
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 150
-
-# Modify retrieval settings
-RETRIEVAL_K = 3  # Return top 3 results
-```
-
-**Frontend:**
-- Modify colors in `tailwind.config.js`
-- Customize chat UI in `components/ChatInterface.jsx`
-- Adjust API endpoint in environment variables
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**1. Backend won't start**
-```bash
-# Check Python version
-python --version  # Should be 3.10+
-
-# Verify API key
-echo $GOOGLE_API_KEY
-```
-
-**2. "Module not found" errors**
-```bash
-# Reinstall dependencies
-pip install -r requirements.txt
-```
-
-**3. Frontend can't connect**
-- Ensure backend is running on port 8000
-- Check CORS settings in `api.py`
-- Verify API URL in frontend config
-
-**4. Slow embedding generation**
-- First run downloads Sentence Transformer model (~90MB)
-- Subsequent runs are fast
-- Check internet connection
-
-**5. HuggingFace timeout**
-```bash
-# Install updated package
-pip install langchain-huggingface
-```
-
----
-
-## 🚀 Deployment
-
-### Backend Deployment (Railway/Render)
-
-1. Add `Procfile`:
-```
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-2. Set environment variables in platform dashboard
-3. Deploy from GitHub
-
-### Frontend Deployment (Vercel/Netlify)
-
-1. Build production version:
-```bash
-npm run build
-```
-
-2. Deploy `dist/` folder
-3. Set API URL environment variable
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how:
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
-### Contribution Guidelines
-
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- Ensure all tests pass
-
----
-
 ## 👥 Team
 
 **Group Members:**
 
-| Name | Role | GitHub |
-|------|------|--------|
-| Member 1 | AI Developer | [@username1] |
-| Member 2 | AI Developer | [@username2] |
-| Member 3 | AI Engineer | [@username3] |
-| Member 4 | AI Engineer | [@username4] |
+| Name | Role |
+|------|------|
+| Micheal Osisami | AI Engineer |
+| Lukman Ibrahim | AI Developer |
+| Samuel Oyedoyin | AI Developer |
+| Opeyemi Odejimi| AI Engineer |
 
-**Project Advisor:** [Your Instructor Name]
+**Project Advisor:** [Mr. Badru]
 
 ---
 
@@ -631,7 +284,7 @@ We welcome contributions! Here's how:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License 
 
 ---
 
@@ -648,9 +301,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Project Repository:** https://github.com/your-team/nelfund-navigator
 
-**Issues:** https://github.com/your-team/nelfund-navigator/issues
-
-**Email:** your-team-email@example.com
+**Email:** osisamimichael@gmail.com
 
 ---
 
@@ -662,13 +313,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ for Nigerian Students**
+**Built for Nigerian Students**
 
 *Empowering education through AI*
 
-[![GitHub stars](https://img.shields.io/github/stars/your-team/nelfund-navigator?style=social)](https://github.com/Osisami00/Nelfund-Project.git)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![React](https://img.shields.io/badge/react-18.0+-61dafb.svg)](https://reactjs.org/)
+[![GitHub stars](https://github.com/Osisami00/Nelfund-Project.git)](https://github.com/Osisami00/Nelfund-Project.git)
 
 </div>
